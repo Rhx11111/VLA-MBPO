@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug train_iql.sh",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/train_libero_iql.py",
+            "args": [
+                "pi05_libero_object_iql",
+                "--exp_name",
+                "libero_object_iql",
+                "--pretrained_path",
+                "/data/home/scwb314/run/models/openpi/pi05_libero/libero_one_shot/5000/params",
+                "--overwrite"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "TF_CPP_MIN_LOG_LEVEL": "3",
+                "TF_TRT_DISABLE": "1",
+                "WANDB_MODE": "offline",
+                "CUDA_VISIBLE_DEVICES": "0,1,2,3",
+                "WANDB_API_KEY": "48747959a93fef99824392f1516ed9e6db1312d1",
+                "XLA_PYTHON_CLIENT_MEM_FRACTION": "0.7"
+            },
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "justMyCode": false
+        }
+    ]
+}
