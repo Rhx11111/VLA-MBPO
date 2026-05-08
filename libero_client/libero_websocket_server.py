@@ -62,17 +62,7 @@ def _libero_worker(
         # Initialize the task suite in the child process.
         benchmark_dict = benchmark.get_benchmark_dict()
         task_suite: Benchmark = benchmark_dict[task_suite_name]()
-        
-        current_task_id = None
-
-        # import torch 
-        # n_gpu = torch.cuda.device_count() 
-        # if n_gpu > 0: 
-        #     device_id = worker_id % n_gpu 
-        #     import os 
-        #     os.environ["EGL_VISIBLE_DEVICES"] = str(device_id) 
-        #     print(f"[Worker {worker_id}] Using device: {device_id}")
-        available_gpus = [0, 1, 2, 3]
+        available_gpus = [0]
         device_id = available_gpus[worker_id % len(available_gpus)]
         import os 
         os.environ["EGL_VISIBLE_DEVICES"] = str(device_id) 

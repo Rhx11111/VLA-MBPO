@@ -1,12 +1,15 @@
 # Data directories.
 assets/
+.ruff_cache
 checkpoints/
-data/
 wandb/
 RLinf/
 pytorch_checkpoints/
 results/
 slurm*
+*.slurm
+*.out
+*.err
 offload/*
 generated_images/
 world_model/eval_result/
@@ -15,8 +18,10 @@ world_model/eval/**/planning_outputs/
 world_model/eval/**/planning_eval_samples/
 test.png
 .codex
+.codex/
 .DS_Store
-.vscode
+.vscode/
+.idea/
 
 
 # Byte-compiled / optimized / DLL files

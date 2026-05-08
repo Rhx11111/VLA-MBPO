@@ -404,7 +404,7 @@ def _load_model_for_worker(model_config_path: str, model_weights_path: str, max_
     tokenizer, new_token_ids, _ = add_special_tokens(tokenizer)
     
     # Image transforms
-    vae_transform = ImageTransform(1024, 512, 16)
+    vae_transform = ImageTransform(1024, 256, 16)
     vit_transform = ImageTransform(518, 224, 14)
     
     device_map = infer_auto_device_map(
@@ -763,18 +763,6 @@ def vlm_pred(
     past_key_values = NaiveCache(model.config.llm_config.num_hidden_layers)
     newlens = [0]
     new_rope = [0]
-
-    # Prepare & forward prompt for main branch
-    generation_input, newlens, new_rope = model.prepare_prompts(
-        curr_kvlens=newlens,
-        curr_rope=new_rope, 
-        prompts=[prompt],
-        tokenizer=tokenizer, 
-        new_token_ids=new_token_ids,
-    )
-    with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-        generation_input = move_to_device(generation_input, device)
-        past_key_values = model.forward_cache_update_text(past_key_values, **generation_input)
         
     # prepare & forward VIT images
     for image in images:
@@ -788,6 +776,18 @@ def vlm_pred(
         with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
             generation_input = move_to_device(generation_input, device)
             past_key_values = model.forward_cache_update_vit(past_key_values, **generation_input)
+
+    # Prepare & forward prompt for main branch
+    generation_input, newlens, new_rope = model.prepare_prompts(
+        curr_kvlens=newlens,
+        curr_rope=new_rope, 
+        prompts=[prompt],
+        tokenizer=tokenizer, 
+        new_token_ids=new_token_ids,
+    )
+    with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
+        generation_input = move_to_device(generation_input, device)
+        past_key_values = model.forward_cache_update_text(past_key_values, **generation_input)
 
     outputs = []
 
@@ -1141,4 +1141,3 @@ class WorldModelInferenceServer:
         """析构函数。"""
         if not self.closed:
             self.close()
-

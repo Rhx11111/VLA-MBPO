@@ -1,7 +1,7 @@
 [project]
 name = "openpi"
 version = "0.1.0"
-description = "Physical Intelligence open source repo"
+description = "Official implementation of VLA-MBPO"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
@@ -41,7 +41,8 @@ dependencies = [
 
 
 [project.urls]
-Repository = "https://github.com/Physical-Intelligence/openpi"
+Paper = "https://arxiv.org/pdf/2603.20607"
+Homepage = "https://rhx11111.github.io/VLA-MBPO/"
 
 [dependency-groups]
 dev = [

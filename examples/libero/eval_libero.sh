@@ -12,9 +12,9 @@ policy=libero_ppo_long_iter_1
 # policy=libero_ppo_long
 step=300
 # step=50
-device=0
+device=1
 task_id=-1
-CUDA_VISIBLE_DEVICES=$device XLA_PYTHON_CLIENT_MEM_FRACTION=0.15 uv run \
+CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_MEM_FRACTION=0.15 uv run \
     scripts/serve_policy.py --port $port policy:checkpoint \
     --policy.config=$config \
     --policy.dir=/data/home/scwb314/run/models/openpi/$config/$policy/$step &

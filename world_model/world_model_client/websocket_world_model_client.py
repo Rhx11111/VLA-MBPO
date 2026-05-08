@@ -18,9 +18,9 @@ except ImportError:
     import msgpack_numpy
 
 
-class WebsocketWorldModelClient(_base_world_model.BaseWorldModelModel):
+class WebsocketWorldModelClient(_base_world_model.BaseWorldModel):
     """
-    WorldModel Model Client that communicates with server over websocket.
+    World Model Client that communicates with server over websocket.
     
     Supports two modes:
     1. Editing (world model): image + prompt -> next_image
@@ -59,8 +59,8 @@ class WebsocketWorldModelClient(_base_world_model.BaseWorldModelModel):
                     max_size=None,
                     open_timeout=self._timeout,
                     close_timeout=self._timeout,
-                    ping_interval=60,
-                    ping_timeout=120,
+                    ping_timeout=None,  
+                    ping_interval=None,
                 )
                 metadata = msgpack_numpy.unpackb(conn.recv())
                 logging.info(f"Connected to WorldModel server: {metadata}")

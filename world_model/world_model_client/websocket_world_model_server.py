@@ -39,8 +39,7 @@ class WebsocketWorldModelServer:
         self.port = port
         self.metadata = {
             'server_type': 'world_model',
-            'model_config_path': inference_server.model_config_path,
-            'model_weights_path': inference_server.model_weights_path,
+            'model_path': inference_server.model_path,
             'num_workers': inference_server.num_workers,
             'gpu_ids': inference_server.gpu_ids,
             'capabilities': ['edit', 'understand'],
@@ -91,9 +90,7 @@ class WebsocketWorldModelServer:
             self.port,
             compression=None,
             max_size=None,
-            close_timeout=30,
-            ping_interval=60,
-            ping_timeout=300,
+            close_timeout=30
         ):
             logging.info("WorldModel server started successfully!")
             logging.info("Capabilities: edit (world model), understand (reward model)")
@@ -108,10 +105,8 @@ def main():
     parser = argparse.ArgumentParser(description="WorldModel Model WebSocket Server with Multi-Worker Architecture")
     
     # Model configuration
-    parser.add_argument("--model-config-path", type=str, required=True,
-                        help="Path to World Model config directory (contains llm_config.json, vit_config.json, ae.safetensors, tokenizer)")
-    parser.add_argument("--model-weights-path", type=str, required=True,
-                        help="Path to model weights file (model.safetensors)")
+    parser.add_argument("--model-path", type=str, required=True,
+                        help="Path to WorldModel model weights directory")
     parser.add_argument("--action-norm-path", type=str, 
                         default=os.environ.get("WORLD_MODEL_ACTION_NORM_PATH"),
                         help="Action normalizer path")
@@ -162,8 +157,7 @@ def main():
     
     # Create inference server with multi-worker architecture
     inference_server = WorldModelInferenceServer(
-        model_config_path=args.model_config_path,
-        model_weights_path=args.model_weights_path,
+        model_path=args.model_path,
         action_norm_path=args.action_norm_path,
         num_workers=args.num_workers,
         gpu_ids=args.gpu_ids,

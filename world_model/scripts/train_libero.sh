@@ -46,8 +46,8 @@ torchrun \
   --master_addr=$MASTER_ADDR \
   --master_port=$MASTER_PORT \
   train/pretrain_unified_navit.py \
-  --dataset_config_file ./data/configs/libero/libero_data.yaml \
-  --wandb_name "libero_data" \
+  --dataset_config_file ./data/configs/libero/goal.yaml \
+  --wandb_name "libero_goal" \
   --wandb_runid "0" \
   --wandb_offline True \
   --model_path $MODEL_PATH \
@@ -64,9 +64,9 @@ torchrun \
   --ce_weight 0.01 \
   --lr 2e-5 \
   --num_shard 4 \
-  --warmup_steps 100 \
-  --total_steps 20000 \
-  --save_every 5000 \
+  --warmup_steps 500 \
+  --total_steps 5000 \
+  --save_every 2500 \
   --expected_num_tokens 32768 \
   --max_num_tokens 32768 \
   --max_num_tokens_per_sample 32768 \

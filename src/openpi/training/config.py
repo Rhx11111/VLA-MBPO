@@ -643,9 +643,6 @@ class RLTrainConfig:
     port: int = 8000
     # port for world model
     world_model_port: int = 8000
-    # Path to JSON file containing task success length information (task_max_lengths and task_min_lengths)
-    success_length_json_path: str | None = None
-
     # If true, will enable wandb logging.
     wandb_enabled: bool = True
 
@@ -763,7 +760,6 @@ _CONFIGS = [
         warmup_step=10,
         sequence_len=2, 
         max_time_stamp=220,
-        success_length_json_path="spatial_success_lengths.json",
         eval_sequence_len=22,
         clip_ratio=0.1,
         clip_ratio_negative=0.1,
@@ -840,7 +836,6 @@ _CONFIGS = [
         warmup_step=10,
         sequence_len=2, 
         max_time_stamp=280,
-        success_length_json_path="object_success_lengths.json",
         eval_sequence_len=28,
         clip_ratio=0.1,
         clip_ratio_negative=0.1,
@@ -870,7 +865,7 @@ _CONFIGS = [
         name="pi05_libero_goal",
         model=pi0_config.Pi0RLConfig(pi05=True, action_horizon=10, discrete_state_input=False, value_ensemble_size=1),
         data=LeRobotLiberoDataConfig(
-            repo_id="libero_goal_chunk_with_wrist",
+            repo_id="libero_goal_task_3",
             base_config=DataConfig(prompt_from_task=True),
             extra_delta_transform=False,
             repack_transform = _transforms.Group(
@@ -888,7 +883,7 @@ _CONFIGS = [
             )
         ),
         eval_data=LeRobotLiberoDataConfig(
-            repo_id="libero_goal_first_step",
+            repo_id="libero_goal_task_3_first_step",
             base_config=DataConfig(prompt_from_task=True),
             extra_delta_transform=False,
             repack_transform = _transforms.Group(
@@ -915,7 +910,7 @@ _CONFIGS = [
         log_interval=10,
         eval_interval=10,
         recompute_interval=10,
-        warmup_step=10,
+        warmup_step=0,
         sequence_len=2, 
         max_time_stamp=300,
         eval_sequence_len=30,
@@ -994,7 +989,6 @@ _CONFIGS = [
         warmup_step=50,
         sequence_len=2, 
         max_time_stamp=520,
-        success_length_json_path="long_success_lengths.json",
         eval_sequence_len=52,
         clip_ratio=0.1,
         clip_ratio_negative=0.1,
