@@ -95,15 +95,16 @@ wheel-based installation guidance.
 ## Required Artifacts
 
 The public model and dataset artifacts are not bundled in this repository yet.
+We recommend you to train yourself. For data collection and SFT model training, refer to openpi repo. For world model training, refer to uni-plan. We also provide our training codes in this repo.
 Before running the full training workflow, prepare the following local paths:
 
-| Variable | Description | Status |
-| --- | --- | --- |
-| `MODEL_CONFIG_PATH` | Base UMM/Bagel config directory | Coming soon |
-| `WORLD_MODEL_CKPT` | Fine-tuned world-model checkpoint | Coming soon |
-| `ACTION_NORM_PATH` | Action normalizer JSON for the selected task suite | Coming soon |
-| `PRETRAINED_POLICY_PATH` | Initial VLA policy checkpoint for RL fine-tuning | Coming soon |
-| LIBERO LeRobot datasets | Converted offline data used by `pi05_libero_*` configs | Coming soon |
+| Variable | Description |
+| --- | --- |
+| `MODEL_CONFIG_PATH` | Base UMM/Bagel config directory |
+| `WORLD_MODEL_CKPT` | Fine-tuned world-model checkpoint |
+| `ACTION_NORM_PATH` | Action normalizer JSON for the selected task suite  |
+| `PRETRAINED_POLICY_PATH` | Initial VLA policy checkpoint for RL fine-tuning |
+| LIBERO LeRobot datasets | Converted offline data used by `pi05_libero_*` configs |
 
 The active LIBERO RL configs are defined in `src/openpi/training/config.py`:
 

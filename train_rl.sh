@@ -21,7 +21,6 @@
 #   bash train_rl.sh
 
 #SBATCH --gpus=4
-
 set -euo pipefail
 
 ROOT_DIR="${ROOT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"

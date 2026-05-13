@@ -62,7 +62,7 @@ def _libero_worker(
         # Initialize the task suite in the child process.
         benchmark_dict = benchmark.get_benchmark_dict()
         task_suite: Benchmark = benchmark_dict[task_suite_name]()
-        available_gpus = [0]
+        available_gpus = [0, 1, 2, 3]
         device_id = available_gpus[worker_id % len(available_gpus)]
         import os 
         os.environ["EGL_VISIBLE_DEVICES"] = str(device_id) 
@@ -332,12 +332,6 @@ class LiberoInferenceServer:
             rewards[env_id] = done
             terminations[env_id] = done
             truncations[env_id] = truncation
-        
-        # # Compute relative rewards
-        # if self.use_rel_reward:
-        #     reward_diff = terminations - self.prev_step_reward
-        #     self.prev_step_reward = terminations.copy()
-        #     rewards = reward_diff
 
         # Make sure there is no -1 reward and terminations after suceed, (avoid libero's bug)
         if self.use_rel_reward:

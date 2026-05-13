@@ -102,6 +102,9 @@ def process_episode_to_dataset(episode_data, file_path, dataset, task_id, max_si
     
     for (idx, frame_data) in enumerate(episode_data):
         action = np.array(frame_data['action'], dtype=np.float32)
+        # Convert first image for evaluation
+        # if idx != 0: 
+        #     continue
         if idx % 10 != 0:
             continue
         

@@ -34,7 +34,7 @@ from modeling.autoencoder import load_ae
 
 
 def get_model_device(model):
-    """获取模型的实际设备 - 对于使用 accelerate 加载的模型更可靠"""
+    """Return the model's actual device. This is more reliable for models loaded with accelerate."""
     if hasattr(model, 'language_model') and hasattr(model.language_model, 'model') and hasattr(model.language_model.model, 'embed_tokens'):
         device = model.language_model.model.embed_tokens.weight.device
         return device
@@ -44,7 +44,7 @@ def get_model_device(model):
 
 
 def move_to_device(generation_input, device):
-    """将 generation_input 字典中的所有张量移动到模型设备"""
+    """Move all tensors in a generation_input dictionary to the model device."""
     for k, v in generation_input.items():
         if isinstance(v, torch.Tensor):
             generation_input[k] = v.to(device)
@@ -64,15 +64,15 @@ def _world_model_worker(
     gpu_id: int,
 ) -> None:
     """
-    Worker 进程函数，运行单个 Bagel 模型实例。
+    Worker process entrypoint that runs one Bagel model instance.
     
     Args:
-        remote: 子进程的连接对象
-        parent_remote: 父进程的连接对象
-        model_config_path: 模型配置文件路径（包含 llm_config.json, vit_config.json, ae.safetensors, tokenizer）
-        model_weights_path: 模型权重文件路径（model.safetensors）
-        action_norm_path: 动作归一化配置路径
-        max_mem_per_gpu: 每个 GPU 的最大内存
+        remote: Connection object for the child process
+        parent_remote: Connection object for the parent process
+        model_config_path: Model config directory containing llm_config.json, vit_config.json, ae.safetensors, and tokenizer files
+        model_weights_path: Model weights file path (model.safetensors)
+        action_norm_path: Action normalizer config path
+        max_mem_per_gpu: Maximum memory per GPU
         worker_id: Worker ID
         gpu_id: GPU ID
     """
@@ -83,40 +83,40 @@ def _world_model_worker(
         
         logging.info(f"[Worker {worker_id}] Initializing on GPU {gpu_id}")
         
-        # 加载 action normalizer
+        # Load the action normalizer.
         with open(action_norm_path, 'r') as f:
             action_normalizer = json.load(f)
             action_normalizer['min'] = np.array(action_normalizer['min'])
             action_normalizer['max'] = np.array(action_normalizer['max'])
-            # 加载 clip_min 和 clip_max（如果存在）
+            # Load clip_min and clip_max if present.
             if 'clip_min' in action_normalizer:
                 action_normalizer['clip_min'] = np.array(action_normalizer['clip_min'])
             else:
-                # 如果没有 clip_min/clip_max，使用 min/max 作为默认值
+                # Fall back to min/max when clip_min/clip_max are absent.
                 action_normalizer['clip_min'] = action_normalizer['min'].copy()
             if 'clip_max' in action_normalizer:
                 action_normalizer['clip_max'] = np.array(action_normalizer['clip_max'])
             else:
                 action_normalizer['clip_max'] = action_normalizer['max'].copy()
         
-        # 加载模型
+        # Load the model.
         model, vae_model, tokenizer, vae_transform, vit_transform, new_token_ids = \
             _load_model_for_worker(model_config_path, model_weights_path, max_mem_per_gpu, gpu_id)
         
         logging.info(f"[Worker {worker_id}] Model loaded successfully on GPU {gpu_id}")
         remote.send(("ready", None))
         
-        # 处理请求
+        # Process requests.
         while True:
             try:
                 cmd, data = remote.recv()
                 
                 if cmd == "edit":
-                    # 解包参数：现在接收 head_images, wrist_images, actions
+                    # Unpack head images, wrist images, and actions.
                     head_images, wrist_images, actions, inference_hyper = data
                     
-                    # 准备 action 字符串（使用与 convert_libero_data.py 中 format_action 相同的逻辑）
-                    # 确保 actions 是 2D (chunk_size, action_dim)
+                    # Format the action string using the same logic as convert_libero_data.py format_action.
+                    # Ensure actions are at least 2D (chunk_size, action_dim).
                     actions_array = np.array(actions)
                     if actions_array.ndim == 1:
                         actions_array = actions_array.reshape(1, -1)
@@ -126,19 +126,19 @@ def _world_model_worker(
                     clip_min = action_normalizer['clip_min']
                     clip_max = action_normalizer['clip_max']
                     
-                    # 格式化每个时间步
+                    # Format each timestep.
                     action_str = []
                     for batch_idx in range(actions_array.shape[0]):
                         timestep_strs = []
-                        # 假设每个 batch 的 action 是一个 chunk，需要按时间步格式化
-                        # 如果 actions_array 是 (batch_size, action_dim)，则每个 batch 只有一个时间步
-                        # 如果 actions_array 是 (batch_size, chunk_size, action_dim)，则需要遍历 chunk_size
+                        # Treat each batch action as a chunk and format it by timestep.
+                        # If actions_array has shape (batch_size, action_dim), each batch item has one timestep.
+                        # If actions_array has shape (batch_size, chunk_size, action_dim), iterate over chunk_size.
                         if actions_array.ndim == 2:
-                            # (batch_size, action_dim) - 每个样本只有一个时间步
+                            # (batch_size, action_dim): each sample has one timestep.
                             step_action = actions_array[batch_idx].copy()
-                            # 裁剪
+                            # Clip.
                             step_action = np.clip(step_action, clip_min, clip_max)
-                            # 归一化到 [0, 256]
+                            # Normalize to [0, 256].
                             action_dim = len(step_action)
                             normalized = np.zeros(action_dim, dtype=int)
                             for dim in range(action_dim):
@@ -148,17 +148,17 @@ def _world_model_worker(
                                 else:
                                     normalized[dim] = int((step_action[dim] - min_vals[dim]) / range_val * 256)
                                     normalized[dim] = np.clip(normalized[dim], 0, 256)
-                            # 格式化为字符串
+                            # Format as a string.
                             action_str_val = ", ".join([str(x) for x in normalized])
                             timestep_strs.append(f"Step 0: [{action_str_val}]")
                         else:
-                            # (batch_size, chunk_size, action_dim) - 每个样本有多个时间步
+                            # (batch_size, chunk_size, action_dim): each sample has multiple timesteps.
                             chunk_size = actions_array.shape[1]
                             for step_idx in range(chunk_size):
                                 step_action = actions_array[batch_idx, step_idx].copy()
-                                # 裁剪
+                                # Clip.
                                 step_action = np.clip(step_action, clip_min, clip_max)
-                                # 归一化到 [0, 256]
+                                # Normalize to [0, 256].
                                 action_dim = len(step_action)
                                 normalized = np.zeros(action_dim, dtype=int)
                                 for dim in range(action_dim):
@@ -168,24 +168,24 @@ def _world_model_worker(
                                     else:
                                         normalized[dim] = int((step_action[dim] - min_vals[dim]) / range_val * 256)
                                         normalized[dim] = np.clip(normalized[dim], 0, 256)
-                                # 格式化为字符串
+                                # Format as a string.
                                 action_str_val = ", ".join([str(x) for x in normalized])
                                 timestep_strs.append(f"Step {step_idx}: [{action_str_val}]")
                         action_str.append("; ".join(timestep_strs))
                     
-                    # 转换为 PIL images
+                    # Convert to PIL images.
                     pil_head_images = [Image.fromarray(img) for img in head_images]
                     pil_wrist_images = [Image.fromarray(img) for img in wrist_images]
                     
-                    # 提取保存图像的参数
+                    # Extract image-saving options.
                     save_images = inference_hyper.get('save_images', True)
                     save_dir = inference_hyper.get('save_dir', None)
                     base_prefix = inference_hyper.get('save_prefix', 'generated')
                     save_prefix_head = f'{base_prefix}_head_worker{worker_id}'
                     save_prefix_wrist = f'{base_prefix}_wrist_worker{worker_id}'
                     
-                    # ========== Stage 1: 生成 next_head ==========
-                    # 输入: [current_head, current_wrist] + action -> next_head
+                    # ========== Stage 1: generate next_head ==========
+                    # Input: [current_head, current_wrist] + action -> next_head
                     stage1_prompt = """You are now acting as a **world model** that simulates robot manipulation task execution.
 Your task is to predict the **next frame of visual observation**, given the following inputs:
 - **Multiple current observation images** from the robot's cameras (head camera and wrist camera)
@@ -198,7 +198,7 @@ You will receive images from different camera viewpoints and need to predict the
                         f"{a}. Predict next head camera view according to the current observation and action."
                         for a in action_str
                     ]
-                    # 准备输入：每个样本是 [head, wrist] 的列表
+                    # Prepare inputs: each sample is a [head, wrist] list.
                     stage1_input_images = [[head, wrist] for head, wrist in zip(pil_head_images, pil_wrist_images)]
                     
                     next_head_images = batch_pred_next_imgs_cfg_multi_input(
@@ -223,8 +223,8 @@ You will receive images from different camera viewpoints and need to predict the
                         save_dir=save_dir,
                         save_prefix=save_prefix_head,
                     )
-                    # ========== Stage 2: 生成 next_wrist ==========
-                    # 输入: [next_head, current_wrist] -> next_wrist
+                    # ========== Stage 2: generate next_wrist ==========
+                    # Input: [next_head, current_wrist] -> next_wrist
                     stage2_prompt = """You are now acting as a **world model** that simulates robot manipulation task execution.
 Your task is to predict the **next frame of visual observation**, given the following inputs:
 - **Multiple current observation images** from the robot's cameras (head camera and wrist camera)
@@ -238,10 +238,10 @@ You will receive images from different camera viewpoints and need to predict the
                         for _ in range(len(pil_wrist_images))
                     ]
                     
-                    # 转换生成的 next_head 为 PIL
+                    # Convert generated next_head images to PIL.
                     pil_next_head_images = [Image.fromarray(img) for img in next_head_images]
                     
-                    # 准备输入：每个样本是 [next_head, current_wrist] 的列表
+                    # Prepare inputs: each sample is a [next_head, current_wrist] list.
                     stage2_input_images = [[next_head, wrist] for next_head, wrist in zip(pil_next_head_images, pil_wrist_images)]
                     
                     next_wrist_images = batch_pred_next_imgs_cfg_multi_input(
@@ -266,14 +266,14 @@ You will receive images from different camera viewpoints and need to predict the
                         save_dir=save_dir,
                         save_prefix=save_prefix_wrist,
                     )
-                    # 返回两个结果
+                    # Return both outputs.
                     remote.send(("success", (np.array(next_head_images), np.array(next_wrist_images))))
                 
                 elif cmd == "understand":
-                    # 解包参数
+                    # Unpack arguments.
                     images, tasks, inference_hyper = data
                     
-                    # 转换为 PIL images
+                    # Convert to PIL images.
                     pil_images = [Image.fromarray(img) for img in images]
 
                     prompt_content = """You are a vision-language model with advanced reasoning abilities.
@@ -302,7 +302,7 @@ Given an image and a task description, determine whether the task has been succe
                     
                     prompts = [f"\n{prompt_content}\nDetermine whether the task: {t} is successfully completed, answer with Yes or No" for t in tasks]
                     
-                    # 获取模型设备
+                    # Get model device.
                     device = get_model_device(model)
                     
                     rewards = []
@@ -321,8 +321,8 @@ Given an image and a task description, determine whether the task has been succe
                             max_length=512,
                             device=device
                         )
-                        # 检查输出是否包含 'Yes'
-                        # 取第一个输出（如果 num_samples > 1，可以取多数投票）
+                        # Check whether the output contains 'Yes'.
+                        # Use the first output. If num_samples > 1, majority voting can be added.
                         output_text = outputs[0] if outputs else ""
                         reward = 'Yes' in output_text or 'yes' in output_text.lower()
                         rewards.append(reward)
@@ -360,10 +360,10 @@ def _load_model_for_worker(model_config_path: str, model_weights_path: str, max_
     """Load model for worker
     
     Args:
-        model_config_path: 模型配置文件路径（包含 llm_config.json, vit_config.json, ae.safetensors, tokenizer）
-        model_weights_path: 模型权重文件路径（model.safetensors）
-        max_mem_per_gpu: 每个 GPU 的最大内存
-        gpu_id: 要使用的 GPU ID
+        model_config_path: Model config directory containing llm_config.json, vit_config.json, ae.safetensors, and tokenizer files
+        model_weights_path: Model weights file path (model.safetensors)
+        max_mem_per_gpu: Maximum memory per GPU
+        gpu_id: GPU ID to use
     """
     # LLM config
     llm_config = Qwen2Config.from_json_file(os.path.join(model_config_path, "llm_config.json"))
@@ -511,7 +511,7 @@ def batch_pred_next_imgs_cfg_multi_input(
         w = _make_divisible(round(w * scale), vae_resize.stride)
         h = _make_divisible(round(h * scale), vae_resize.stride)
     
-    # 获取模型设备
+    # Get model device.
     device = get_model_device(model)
     
     # ========== Main branch: prompt + images + actions ==========
@@ -857,9 +857,9 @@ class WorldModelInferenceServer:
             max_mem_per_gpu: Maximum memory per GPU (e.g., "40GiB")
             start_method: Multiprocessing start method ('spawn' or 'forkserver')
             edit_*: Default hyperparameters for editing (world model)
-            save_images: 是否默认保存生成的图像 (default: True)
-            save_dir: 默认保存图像的目录 (default: "./generated_images")
-            save_prefix: 默认保存图像的文件名前缀 (default: "generated")
+            save_images: Whether to save generated images by default (default: True)
+            save_dir: Default directory for generated images (default: "./generated_images")
+            save_prefix: Default filename prefix for generated images (default: "generated")
             understand_*: Default hyperparameters for understanding (reward model)
         """
         self.model_config_path = model_config_path
@@ -868,7 +868,7 @@ class WorldModelInferenceServer:
         self.max_mem_per_gpu = max_mem_per_gpu
         self.closed = False
         
-        # 确定使用的 GPU
+        # Select GPUs.
         if gpu_ids is None:
             num_gpus = torch.cuda.device_count()
             if num_gpus == 0:
@@ -876,7 +876,7 @@ class WorldModelInferenceServer:
             gpu_ids = list(range(num_gpus))
         self.gpu_ids = gpu_ids
         
-        # 确定 worker 数量
+        # Determine worker count.
         if num_workers is None:
             num_workers = len(gpu_ids)
         self.num_workers = num_workers
@@ -904,14 +904,14 @@ class WorldModelInferenceServer:
             'max_length': understand_max_tokens,
         }
         
-        # 设置多进程启动方法
+        # Set multiprocessing start method.
         if start_method is None:
             start_method = "spawn"
         
         logging.info(f"Using multiprocessing start method: {start_method}")
         ctx = mp.get_context(start_method)
         
-        # 创建 worker 进程
+        # Create worker processes.
         self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(self.num_workers)])
         self.processes = []
         
@@ -933,14 +933,14 @@ class WorldModelInferenceServer:
             work_remote.close()
             logging.info(f"Started worker process {i} on GPU {gpu_id}")
         
-        # 等待所有 worker 准备就绪
+        # Wait for all workers to become ready.
         logging.info("Waiting for all workers to load models...")
         self._wait_for_workers_ready()
         
         logging.info("Bagel Inference Server initialized successfully!")
     
     def _wait_for_workers_ready(self, timeout: float = 300.0):
-        """等待所有 worker 进程准备就绪。"""
+        """Wait until all worker processes are ready."""
         import time
         start_time = time.time()
         
@@ -962,7 +962,7 @@ class WorldModelInferenceServer:
     def edit(self, head_image: np.ndarray, wrist_image: np.ndarray, action: np.ndarray, **kwargs) -> Dict:
         """
         Edit/generate next frame images based on current multi-view images and action (world model mode).
-        数据会自动分发到不同的 worker 进行并行处理。
+        Data is automatically distributed across workers for parallel processing.
         
         Uses a two-stage generation process:
         1. Generate next head camera view: [current_head, current_wrist] + action -> next_head
@@ -973,9 +973,9 @@ class WorldModelInferenceServer:
             wrist_image: Input wrist camera images, shape (N, H, W, 3), dtype uint8, RGB
             action: Actions, shape (N, action_dim)
             **kwargs: Override default editing hyperparameters
-                - save_images (bool): 是否保存生成的图像 (default: True)
-                - save_dir (str): 保存图像的目录路径 (default: "./generated_images")
-                - save_prefix (str): 保存图像的文件名前缀 (default: "generated")
+                - save_images (bool): Whether to save generated images (default: True)
+                - save_dir (str): Directory for generated images (default: "./generated_images")
+                - save_prefix (str): Filename prefix for generated images (default: "generated")
             
         Returns:
             Dict with:
@@ -987,13 +987,13 @@ class WorldModelInferenceServer:
         
         batch_size = len(head_image)
         
-        # 将数据分配到不同的 worker
-        # 计算每个 worker 应该处理的样本数量
+        # Split data across workers.
+        # Compute how many samples each worker should process.
         samples_per_worker = [batch_size // self.num_workers] * self.num_workers
         for i in range(batch_size % self.num_workers):
             samples_per_worker[i] += 1
         
-        # 分发数据到 worker
+        # Send data to workers.
         start_idx = 0
         for worker_id in range(self.num_workers):
             end_idx = start_idx + samples_per_worker[worker_id]
@@ -1004,7 +1004,7 @@ class WorldModelInferenceServer:
                 self.remotes[worker_id].send(("edit", (worker_head_images, worker_wrist_images, worker_actions, inference_hyper)))
             start_idx = end_idx
         
-        # 收集结果
+        # Collect results.
         next_head_images = []
         next_wrist_images = []
         start_idx = 0
@@ -1013,12 +1013,12 @@ class WorldModelInferenceServer:
                 status, result = self.remotes[worker_id].recv()
                 if status == "error":
                     raise RuntimeError(f"Worker {worker_id} error: {result}")
-                # result 现在是 (next_head, next_wrist) 的元组
+                # The result is a (next_head, next_wrist) tuple.
                 next_head, next_wrist = result
                 next_head_images.append(next_head)
                 next_wrist_images.append(next_wrist)
         
-        # 拼接结果
+        # Concatenate results.
         next_head_images = np.concatenate(next_head_images, axis=0)
         next_wrist_images = np.concatenate(next_wrist_images, axis=0)
         
@@ -1028,7 +1028,7 @@ class WorldModelInferenceServer:
     def understand(self, image: np.ndarray, task: list, **kwargs) -> Dict:
         """
         Understand image and answer question (reward model mode).
-        数据会自动分发到不同的 worker 进行并行处理。
+        Data is automatically distributed across workers for parallel processing.
         
         Args:
             image: Input images, shape (N, H, W, 3), dtype uint8, RGB
@@ -1043,12 +1043,12 @@ class WorldModelInferenceServer:
         
         batch_size = len(image)
         
-        # 将数据分配到不同的 worker
+        # Split data across workers.
         samples_per_worker = [batch_size // self.num_workers] * self.num_workers
         for i in range(batch_size % self.num_workers):
             samples_per_worker[i] += 1
         
-        # 分发数据到 worker
+        # Send data to workers.
         start_idx = 0
         for worker_id in range(self.num_workers):
             end_idx = start_idx + samples_per_worker[worker_id]
@@ -1058,7 +1058,7 @@ class WorldModelInferenceServer:
                 self.remotes[worker_id].send(("understand", (worker_images, worker_tasks, inference_hyper)))
             start_idx = end_idx
         
-        # 收集结果
+        # Collect results.
         rewards = []
         start_idx = 0
         for worker_id in range(self.num_workers):
@@ -1088,11 +1088,11 @@ class WorldModelInferenceServer:
             return self.understand(image, task, **kwargs)
         
         elif method == 'reset':
-            # 发送 reset 命令到所有 worker
+            # Send reset commands to all workers.
             for worker_id in range(self.num_workers):
                 self.remotes[worker_id].send(("reset", None))
             
-            # 等待所有 worker 完成 reset
+            # Wait for all workers to finish reset.
             for worker_id in range(self.num_workers):
                 status, _ = self.remotes[worker_id].recv()
                 if status == "error":
@@ -1104,18 +1104,18 @@ class WorldModelInferenceServer:
             raise ValueError(f"Unknown method: {method}")
     
     def close(self) -> Dict:
-        """关闭所有 worker 进程。"""
+        """Close all worker processes."""
         if self.closed:
             return {"status": "already_closed"}
         
-        # 发送关闭命令到所有 worker
+        # Send close commands to all workers.
         for i, remote in enumerate(self.remotes):
             try:
                 remote.send(("close", None))
             except (BrokenPipeError, EOFError, Exception) as e:
                 logging.warning(f"Error sending close command to worker {i}: {e}")
         
-        # 等待所有进程结束
+        # Wait for all processes to exit.
         for i, process in enumerate(self.processes):
             try:
                 process.join(timeout=5)
@@ -1126,7 +1126,7 @@ class WorldModelInferenceServer:
             except Exception as e:
                 logging.warning(f"Error closing worker {i}: {e}")
         
-        # 关闭所有 remote 连接
+        # Close all remote connections.
         for i, remote in enumerate(self.remotes):
             try:
                 remote.close()
@@ -1138,6 +1138,6 @@ class WorldModelInferenceServer:
         return {"status": "closed"}
     
     def __del__(self):
-        """析构函数。"""
+        """Destructor."""
         if not self.closed:
             self.close()
