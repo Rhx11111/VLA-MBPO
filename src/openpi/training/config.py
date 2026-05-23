@@ -866,6 +866,7 @@ _CONFIGS = [
         model=pi0_config.Pi0RLConfig(pi05=True, action_horizon=10, discrete_state_input=False, value_ensemble_size=1),
         data=LeRobotLiberoDataConfig(
             repo_id="libero_goal_task_3",
+            # repo_id="libero_goal_chunk_with_wrist",
             base_config=DataConfig(prompt_from_task=True),
             extra_delta_transform=False,
             repack_transform = _transforms.Group(
@@ -884,6 +885,7 @@ _CONFIGS = [
         ),
         eval_data=LeRobotLiberoDataConfig(
             repo_id="libero_goal_task_3_first_step",
+            # repo_id="libero_goal_first_step",
             base_config=DataConfig(prompt_from_task=True),
             extra_delta_transform=False,
             repack_transform = _transforms.Group(

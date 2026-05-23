@@ -62,7 +62,8 @@ def _libero_worker(
         # Initialize the task suite in the child process.
         benchmark_dict = benchmark.get_benchmark_dict()
         task_suite: Benchmark = benchmark_dict[task_suite_name]()
-        available_gpus = [0, 1, 2, 3]
+        # available_gpus = [0, 1, 2, 3]
+        available_gpus = [0]
         device_id = available_gpus[worker_id % len(available_gpus)]
         import os 
         os.environ["EGL_VISIBLE_DEVICES"] = str(device_id) 

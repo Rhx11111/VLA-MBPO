@@ -39,7 +39,8 @@ class WebsocketWorldModelServer:
         self.port = port
         self.metadata = {
             'server_type': 'world_model',
-            'model_path': inference_server.model_path,
+            'model_config_path': inference_server.model_config_path,
+            'model_weights_path': inference_server.model_weights_path,
             'num_workers': inference_server.num_workers,
             'gpu_ids': inference_server.gpu_ids,
             'capabilities': ['edit', 'understand'],
@@ -105,8 +106,10 @@ def main():
     parser = argparse.ArgumentParser(description="WorldModel Model WebSocket Server with Multi-Worker Architecture")
     
     # Model configuration
+    parser.add_argument("--model-config-path", type=str, required=True,
+                        help="Path to BAGEL base model config directory containing llm_config.json, vit_config.json, ae.safetensors, and tokenizer files")
     parser.add_argument("--model-path", type=str, required=True,
-                        help="Path to WorldModel model weights directory")
+                        help="Path to finetuned WorldModel checkpoint directory containing model.safetensors")
     parser.add_argument("--action-norm-path", type=str, 
                         default=os.environ.get("WORLD_MODEL_ACTION_NORM_PATH"),
                         help="Action normalizer path")
@@ -157,7 +160,8 @@ def main():
     
     # Create inference server with multi-worker architecture
     inference_server = WorldModelInferenceServer(
-        model_path=args.model_path,
+        model_config_path=args.model_config_path,
+        model_weights_path=args.model_path,
         action_norm_path=args.action_norm_path,
         num_workers=args.num_workers,
         gpu_ids=args.gpu_ids,

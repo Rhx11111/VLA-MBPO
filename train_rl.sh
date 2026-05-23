@@ -26,8 +26,10 @@ set -euo pipefail
 ROOT_DIR="${ROOT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
 MODEL_CONFIG_PATH=${MODEL_CONFIG_PATH:-/data/home/scwb314/run/models/BAGEL-7B-MoT}
-WORLD_MODEL_CKPT=${WORLD_MODEL_CKPT:-/data/home/scwb314/run/bagel-result/libero/libero_data/bagel/libero_goal-run0/ckpt/0002500}
-ACTION_NORM_PATH=${ACTION_NORM_PATH:-/data/home/scwb314/run/data/bagel_data/dynamics/libero_goal_with_wrist_v2/action_normalizer.json}
+# WORLD_MODEL_CKPT=${WORLD_MODEL_CKPT:-/data/home/scwb314/run/bagel-result/libero/libero_data/bagel/libero_goal-run0/ckpt/0002500}
+# ACTION_NORM_PATH=${ACTION_NORM_PATH:-/data/home/scwb314/run/data/bagel_data/dynamics/libero_goal_with_wrist_v2/action_normalizer.json}
+WORLD_MODEL_CKPT=${WORLD_MODEL_CKPT:-/data/home/scwb314/run/bagel-result/libero_goal_standard_dynamics_reward_256_8000_trainset_eval/checkpoints/0006000}
+ACTION_NORM_PATH=${ACTION_NORM_PATH:-/data/home/scwb314/run/MBPOv2/RLinf/outputs/bagel_libero_goal_standard_dynamics_reward_existing_v1/action_normalizer.json}
 PRETRAINED_POLICY_PATH=${PRETRAINED_POLICY_PATH:-/data/home/scwb314/run/models/openpi/pi05_libero/libero_one_shot/5000/params}
 
 WORLD_MODEL_ENV="${WORLD_MODEL_ENV:-uni-plan}"
@@ -83,7 +85,7 @@ conda activate "$WORLD_MODEL_ENV"
 cd "$ROOT_DIR/world_model"
 python world_model_client/websocket_world_model_server.py \
     --model-config-path "$MODEL_CONFIG_PATH" \
-    --model-weights-path "$WORLD_MODEL_CKPT" \
+    --model-path "$WORLD_MODEL_CKPT" \
     --action-norm-path "$ACTION_NORM_PATH" \
     --max-mem-per-gpu "$MAX_MEM_PER_GPU" \
     --num-workers "$NUM_WORKERS" \

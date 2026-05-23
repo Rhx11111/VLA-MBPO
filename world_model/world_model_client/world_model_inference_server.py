@@ -405,7 +405,7 @@ def _load_model_for_worker(model_config_path: str, model_weights_path: str, max_
     
     # Image transforms
     vae_transform = ImageTransform(1024, 256, 16)
-    vit_transform = ImageTransform(518, 224, 14)
+    vit_transform = ImageTransform(980, 378, 14)
     
     device_map = infer_auto_device_map(
         model,
