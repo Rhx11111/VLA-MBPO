@@ -26,6 +26,7 @@ by VLA-MBPO.
 - Chunk-level branched rollout for stable world model-based policy optimization.
 - Websocket-based world-model and LIBERO environment servers for distributed RL.
 - Training configs for LIBERO Spatial, Object, Goal, and Long-Horizon suites.
+- Released toy-example policy and world-model checkpoints for an end-to-end run.
 
 ## Repository Layout
 
@@ -92,18 +93,43 @@ pip install -r requirements.txt
 If `flash_attn` cannot be built from source, see `world_model/README.md` for
 wheel-based installation guidance.
 
+## Checkpoints
+
+We release a pair of **toy-example** checkpoints so that the full pipeline can be
+run end-to-end without training everything from scratch:
+
+| Artifact | Link | Use as |
+| --- | --- | --- |
+| pi0.5 LIBERO one-shot policy | [Rhx11111/pi05_libero_one_shot](https://huggingface.co/Rhx11111/pi05_libero_one_shot) | `PRETRAINED_POLICY_PATH` |
+| Bagel world model (LIBERO Goal, 256 res, step 2500) | [Rhx11111/Bagel-goal-256-2500](https://huggingface.co/Rhx11111/Bagel-goal-256-2500) | `WORLD_MODEL_CKPT` |
+
+```bash
+huggingface-cli download Rhx11111/pi05_libero_one_shot --local-dir ckpts/pi05_libero_one_shot
+huggingface-cli download Rhx11111/Bagel-goal-256-2500 --local-dir ckpts/bagel_goal_256_2500
+```
+
+These two checkpoints are meant as a minimal demonstration of the VLA-MBPO loop
+(the policy is a one-shot SFT initialization, the world model is an early-step
+LIBERO Goal model), not as the strongest models from the paper. Expect them to
+show the mechanics working rather than final reported numbers.
+
+> **Note.** We are actively cleaning up a more complete and better-organized
+> codebase, together with stronger policy and world-model checkpoints, and plan
+> to release it in the near future.
+
 ## Required Artifacts
 
-The public model and dataset artifacts are not bundled in this repository yet.
-We recommend you to train yourself. For data collection and SFT model training, refer to openpi repo. For world model training, refer to uni-plan. We also provide our training codes in this repo.
+Apart from the checkpoints above, we recommend you to train yourself. For data
+collection and SFT model training, refer to the openpi repo. For world model
+training, refer to uni-plan. We also provide our training codes in this repo.
 Before running the full training workflow, prepare the following local paths:
 
 | Variable | Description |
 | --- | --- |
 | `MODEL_CONFIG_PATH` | Base UMM/Bagel config directory |
-| `WORLD_MODEL_CKPT` | Fine-tuned world-model checkpoint |
+| `WORLD_MODEL_CKPT` | Fine-tuned world-model checkpoint (e.g. `Bagel-goal-256-2500`) |
 | `ACTION_NORM_PATH` | Action normalizer JSON for the selected task suite  |
-| `PRETRAINED_POLICY_PATH` | Initial VLA policy checkpoint for RL fine-tuning |
+| `PRETRAINED_POLICY_PATH` | Initial VLA policy checkpoint for RL fine-tuning (e.g. `pi05_libero_one_shot`) |
 | LIBERO LeRobot datasets | Converted offline data used by `pi05_libero_*` configs |
 
 The active LIBERO RL configs are defined in `src/openpi/training/config.py`:
